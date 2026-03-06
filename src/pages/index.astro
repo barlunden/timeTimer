@@ -43,6 +43,7 @@ import "../styles/global.css";
 
     <svg class="absolute w-full h-full -rotate-90" viewBox="0 0 100 100">
       <g id="tick-marks"></g>
+      <g id="tick-numbers"></g>
       <circle
         id="timer-disk"
         cx="50"
@@ -135,6 +136,7 @@ import "../styles/global.css";
   const alarmSound = new Audio(
     "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
   );
+  
 
   // Hent element
   const disk = document.getElementById(
@@ -148,6 +150,7 @@ import "../styles/global.css";
   const tickGroup = document.getElementById(
     "tick-marks",
   ) as unknown as SVGGElement;
+  const tickNumbers = document.getElementById("tick-numbers") as unknown as SVGGElement;
   const colorButtons = document.querySelectorAll(".color-picker");
 
   colorButtons.forEach((btn) => {
@@ -209,19 +212,24 @@ import "../styles/global.css";
   }
 
   function createTicks() {
-    for (let i = 0; i < 60; i++) {
-      const angle = i * 6 * (Math.PI / 180);
-      const isFiveMin = i % 5 === 0;
-      const innerRadius = isFiveMin ? 42 : 45;
+  tickGroup.innerHTML = '';
+  tickNumbers.innerHTML = '';
+
+  for (let i = 0; i <= 60; i++) {
+    // Vi startar på 270 grader (toppen i dette spegla systemet) 
+    // og legg til vinkelen for å gå med klokka
+    const angle = (i * 6) * (Math.PI / 180);
+    const isFiveMin = i % 5 === 0;
+    
+    // 1. Strekane (som før)
+    if (i < 60) {
+      const innerRadius = isFiveMin ? 42 : 45; 
       const x1 = 50 + innerRadius * Math.cos(angle);
       const y1 = 50 + innerRadius * Math.sin(angle);
       const x2 = 50 + 50 * Math.cos(angle);
       const y2 = 50 + 50 * Math.sin(angle);
 
-      const line = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "line",
-      );
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("x1", x1.toString());
       line.setAttribute("y1", y1.toString());
       line.setAttribute("x2", x2.toString());
@@ -230,7 +238,32 @@ import "../styles/global.css";
       line.setAttribute("stroke-width", isFiveMin ? "1" : "0.5");
       tickGroup.appendChild(line);
     }
+
+    // 2. Tala (Motsatt rekkefølge: 55, 50, 45...)
+    if (isFiveMin && i > 0 && i < 60) {
+      const textRadius = 38;
+      const tx = 50 + textRadius * Math.cos(angle);
+      const ty = 50 + textRadius * Math.sin(angle);
+
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", tx.toString());
+      text.setAttribute("y", ty.toString());
+      text.setAttribute("fill", "#475569");
+      text.setAttribute("font-size", "4");
+      text.setAttribute("font-weight", "900");
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("dominant-baseline", "middle");
+
+      text.setAttribute("transform", `rotate(90, ${tx}, ${ty})`);
+      
+      // Her snur vi rekkefølga!
+      text.textContent = (60 - i).toString();
+      tickNumbers.appendChild(text);
+    }
   }
+
+
+}
 
   // Event Listeners
   startBtn.addEventListener("click", startTimer);
