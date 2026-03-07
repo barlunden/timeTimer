@@ -2,10 +2,10 @@
 import Layout from '../layouts/Layout.astro';
 ---
 
-<Layout title="Time Timer Pro | Feilsikker">
-<div class="flex flex-col items-center justify-center min-h-screen p-8 bg-slate-50">
+<Layout title="Time Timer Pro | Digital v3">
+<div class="flex flex-col items-center justify-center min-h-screen p-8 bg-slate-50 overflow-hidden">
   
-  <button id="fs-toggle" class="fixed top-6 right-6 p-2 text-slate-400 hover:text-slate-600 transition-colors">
+  <button id="fs-toggle" class="fixed top-6 right-6 p-2 text-slate-400 hover:text-slate-600 transition-colors z-50">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
   </button>
 
@@ -15,6 +15,7 @@ import Layout from '../layouts/Layout.astro';
     <svg class="absolute w-full h-full" viewBox="0 0 100 100">
       <g id="tick-marks"></g>
       <g id="tick-numbers"></g>
+      
       <circle
         id="timer-disk"
         cx="50" cy="50" r="25"
@@ -23,20 +24,31 @@ import Layout from '../layouts/Layout.astro';
         stroke-width="50"
         stroke-dasharray="157"
         stroke-dashoffset="0"
-        opacity="0.92" 
+        opacity="0.9" 
         style="transform: scaleX(-1) rotate(270deg); transform-origin: center;"
         class="timer-transition"
       ></circle>
+
+      <line 
+        id="second-hand" 
+        x1="50" y1="50" x2="50" y2="7" 
+        stroke="#94a3b8" 
+        stroke-width="0.7" 
+        stroke-linecap="round"
+        style="transform-origin: center; opacity: 0;"
+      />
     </svg>
     <div class="z-10 w-4 h-4 bg-slate-800 rounded-full shadow-md"></div>
   </div>
 
   <div class="mt-12 space-y-8 w-full max-w-md text-center">
-    <div id="time-display" class="text-6xl font-mono font-bold text-slate-700 tracking-tight">25:00</div>
+    <div id="time-display" class="text-6xl font-mono font-bold text-slate-700 tracking-tight transition-colors duration-300">
+      25:00
+    </div>
 
     <div class="flex gap-4 justify-center">
-      <button id="start-btn" class="bg-emerald-500 text-white px-10 py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg text-lg min-w-35">Start</button>
-      <button id="reset-btn" class="bg-slate-200 text-slate-700 px-10 py-4 rounded-2xl font-bold hover:bg-slate-300 transition-colors text-lg">Nullstill</button>
+      <button id="start-btn" class="bg-emerald-500 text-white w-40 py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg text-lg flex items-center justify-center">Start</button>
+      <button id="reset-btn" class="bg-slate-200 text-slate-700 w-40 py-4 rounded-2xl font-bold hover:bg-slate-300 transition-colors text-lg flex items-center justify-center">Nullstill</button>
     </div>
 
     <div class="pt-8 border-t border-slate-200 space-y-6">
@@ -50,17 +62,26 @@ import Layout from '../layouts/Layout.astro';
         </div>
       </div>
 
-      <div>
-        <p class="text-xs uppercase tracking-[0.2em] text-slate-400 font-bold mb-4">Farge</p>
-        <div class="flex gap-3 justify-center">
-          {['#ef4444', '#f97316', '#facc15', '#10b981', '#3b82f6', '#a855f7'].map(color => (
-            <button class="color-picker w-10 h-10 rounded-full border-4 border-white shadow-sm transition-transform active:scale-90" data-color={color} style={`background-color: ${color}`} />
-          ))}
-        </div>
+      <div class="flex gap-3 justify-center">
+        {['#ef4444', '#f97316', '#facc15', '#10b981', '#3b82f6', '#a855f7'].map(color => (
+          <button class="color-picker w-10 h-10 rounded-full border-4 border-white shadow-sm transition-transform active:scale-90" data-color={color} style={`background-color: ${color}`} />
+        ))}
       </div>
     </div>
   </div>
 </div>
+
+<style>
+  /* Gjer at blinkinga blir tydelegare med raud farge */
+  .animate-pulse.text-red-600 {
+    animation: pulse-red 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { opacity: 1; color: #dc2626; }
+    50% { opacity: 0.3; color: #ef4444; }
+  }
+</style>
 
 <script>
   let totalSeconds: number = 25 * 60;
@@ -69,9 +90,14 @@ import Layout from '../layouts/Layout.astro';
   let endTime: number | null = null;
   let wakeLock: any = null;
   const fullDash = 157;
-  const alarmSound = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+  
+  // DIGITAL LYD (Mixkit 1000)
+  const alarmSound = new Audio("https://assets.mixkit.co/active_storage/sfx/1000/1000-preview.mp3");
+  alarmSound.loop = true;
+  alarmSound.volume = 0.8;
 
   const disk = document.getElementById("timer-disk") as unknown as SVGCircleElement;
+  const secondHand = document.getElementById("second-hand") as unknown as SVGLineElement;
   const display = document.getElementById("time-display") as HTMLElement;
   const startBtn = document.getElementById("start-btn") as HTMLButtonElement;
   const resetBtn = document.getElementById("reset-btn") as HTMLButtonElement;
@@ -82,13 +108,11 @@ import Layout from '../layouts/Layout.astro';
   const tickGroup = document.getElementById("tick-marks") as unknown as SVGGElement;
   const tickNumbers = document.getElementById("tick-numbers") as unknown as SVGGElement;
 
-  // Wake Lock for iPad
   async function startWakeLock() {
     if ("wakeLock" in navigator) {
       try {
         wakeLock = await (navigator as any).wakeLock.request("screen");
-        wakeLock.addEventListener("release", () => { wakeLock = null; });
-      } catch (err) { console.error("Wake Lock feilet"); }
+      } catch (err) { console.warn("Wake Lock feila"); }
     }
   }
 
@@ -98,9 +122,14 @@ import Layout from '../layouts/Layout.astro';
     const secs = timeLeft % 60;
     display.textContent = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 
-    const maxSeconds = 3600;
-    const offset = fullDash * (1 - (timeLeft / maxSeconds));
+    const offset = fullDash * (1 - (timeLeft / 3600));
     disk.setAttribute("stroke-dashoffset", offset.toString());
+
+    // Sekundvisar utan animasjon for å hindre "spoling"
+    const rotation = -(secs * 6);
+    secondHand.style.transition = "none";
+    secondHand.style.transform = `rotate(${rotation}deg)`;
+    secondHand.style.opacity = (timerId && timeLeft > 0) ? "1" : "0";
   }
 
   function tick() {
@@ -110,40 +139,65 @@ import Layout from '../layouts/Layout.astro';
       updateVisuals(true);
 
       if (timeLeft <= 0) {
-        stopTimer();
-        alarmSound.play();
-        setTimeout(() => alert("Tiden er ute!"), 100);
+        // TIDA ER UTE
+        clearInterval(timerId);
+        timerId = undefined;
+        endTime = null;
+        
+        alarmSound.play().catch(() => {});
+        display.classList.add("text-red-600", "animate-pulse");
+        
+        startBtn.textContent = "Start";
+        startBtn.classList.remove("bg-orange-500");
+        startBtn.classList.add("bg-emerald-500");
       }
     }
   }
 
   function startTimer() {
-    alarmSound.play(); alarmSound.pause(); alarmSound.currentTime = 0; // iOS lyd-prep
+    // Preparer lyd for iOS/iPad
+    alarmSound.play().then(() => { alarmSound.pause(); alarmSound.currentTime = 0; }).catch(() => {});
     
+    // Fjern blink viss vi startar på nytt
+    display.classList.remove("text-red-600", "animate-pulse");
+    alarmSound.pause();
+    alarmSound.currentTime = 0;
+
     if (timerId) {
-      // Pause
+      // PAUSE
       clearInterval(timerId);
       timerId = undefined;
       endTime = null;
       startBtn.textContent = "Fortsett";
-      startBtn.classList.replace("bg-orange-500", "bg-emerald-500");
-    } else {
-      // Start/Fortsett
+      startBtn.classList.remove("bg-orange-500");
+      startBtn.classList.add("bg-emerald-500");
+    } else if (timeLeft > 0) {
+      // START / FORTSETT
       startWakeLock();
       endTime = Date.now() + (timeLeft * 1000);
       startBtn.textContent = "Pause";
+      startBtn.classList.remove("bg-emerald-500");
       startBtn.classList.add("bg-orange-500");
       timerId = window.setInterval(tick, 1000);
+      updateVisuals(false);
     }
   }
 
   function stopTimer() {
+    // RESET-funksjon
     clearInterval(timerId);
     timerId = undefined;
     endTime = null;
+    
+    alarmSound.pause();
+    alarmSound.currentTime = 0;
+    display.classList.remove("text-red-600", "animate-pulse");
+
     startBtn.textContent = "Start";
     startBtn.classList.remove("bg-orange-500");
-    if (wakeLock) wakeLock.release();
+    startBtn.classList.add("bg-emerald-500");
+    
+    if (wakeLock) { wakeLock.release().then(() => { wakeLock = null; }); }
   }
 
   function createTicks() {
@@ -179,7 +233,6 @@ import Layout from '../layouts/Layout.astro';
     }
   }
 
-  // Event Listeners
   startBtn.addEventListener("click", startTimer);
   resetBtn.addEventListener("click", () => { stopTimer(); timeLeft = totalSeconds; updateVisuals(false); });
   
@@ -207,11 +260,10 @@ import Layout from '../layouts/Layout.astro';
     else document.exitFullscreen();
   });
 
-  // Re-aktiver Wake Lock når appen kjem i forgrunnen
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && timerId) {
       startWakeLock();
-      tick(); // Oppdater visuelt med ein gong
+      tick(); 
     }
   });
 
